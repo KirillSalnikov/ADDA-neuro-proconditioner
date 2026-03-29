@@ -59,10 +59,10 @@ def main():
     # Build occupancy grid
     occ_grid = positions_to_occupancy(positions, grid_size=args.grid, device='cpu')
 
-    # Build FFTMatVec to get D_hat
+    # Build FFTMatVec to get D_hat (ADDA convention: k=1, d=kd)
     pos_torch = torch.tensor(positions, dtype=torch.long)
-    d = 1.0
-    k = args.kd / d
+    d = args.kd
+    k = 1.0
     m = complex(args.m_re, args.m_im)
     fft_mv = FFTMatVec(pos_torch, k, m, d=d, device='cpu')
 
@@ -99,9 +99,9 @@ def main():
     stencil = []
     kernel = []
 
-    for di in range(-(gx // 2), gx // 2 + 1):
-        for dj in range(-(gy // 2), gy // 2 + 1):
-            for dk in range(-(gz // 2), gz // 2 + 1):
+    for di in range(-(gx // 2), gx // 2):
+        for dj in range(-(gy // 2), gy // 2):
+            for dk in range(-(gz // 2), gz // 2):
                 gi = di % gx
                 gj = dj % gy
                 gk = dk % gz
