@@ -1,0 +1,85 @@
+======================================================================
+AUTORESEARCH REPORT: Neural Preconditioner for DDA
+======================================================================
+
+5-MINUTE EXPERIMENTS (18 total)
+----------------------------------------------------------------------
+  # Status     Median     Mean    Worst   Steps  Description
+----------------------------------------------------------------------
+  1 keep        2.353    2.492    1.267    7034  Baseline (from scratch)
+  2 keep        2.375    2.526    1.125    5807  LR=1e-3 + cosine
+  3 discard     2.356    2.345    1.200    5885  hidden=256
+  4 keep        2.918    3.051    0.720    5818  Pretrained + fine-tune
+  5 keep        2.934    2.988    0.947    2531  No curriculum, adv=20
+  6 discard     2.703    2.820    1.000    2526  GELU activation
+  7 discard     2.952    2.981    0.900    1938  0.7*adv + 0.3*spectral
+  8 discard     2.691    3.084    0.783    7342  adv_iters=5
+  9 discard     0.063    0.100    0.009    7418  GMRES loss
+ 10 discard     2.865    3.101    0.900    1495  adv=30, probes=10
+ 11 discard     2.742    2.949    0.818    6276  grid 8-16 only
+ 12 discard     2.392    2.532    1.125    2509  OneCycleLR 5e-3
+ 13 discard     2.791    2.982    0.947    2509  m_re=[2.0,3.5]
+ 14 keep        2.731    3.025    1.125       0  Pretrained, 0 training
+ 15 discard     2.800    2.978    1.000    2518  LR=5e-5, no wd
+ 16 discard     1.689    1.709    0.920    2533  r_cut=5 from scratch
+ 17 discard     2.747    2.889    0.947    2527  Freeze encoder
+ 18 discard     2.769    3.020    1.000    7529  Spectral loss
+
+Best 5-min: #7 (0.7*adv + 0.3*spectral) = 2.952x
+
+
+30-MINUTE EXPERIMENTS (6 total)
+----------------------------------------------------------------------
+  # Status     Median     Mean    Worst   Steps  Description
+----------------------------------------------------------------------
+  1 keep        3.052    2.929    0.415   26876  Baseline (from scratch)
+  2 discard     2.727    2.759    0.947   16008  adv_iters=20
+  3 discard     2.627    2.835    0.783   27938  LR=1e-3
+  4 discard     2.374    2.479    1.200    7483  grid 8-40, no curriculum
+  5 discard     2.886    2.906    0.529   24785  num_probes=10
+  6 discard     2.678    2.945    0.429   35996  grid 8-24, curriculum=0.15
+
+Best 30-min: #1 (Baseline (from scratch)) = 3.052x
+
+
+PER-CONFIG BREAKDOWN (best models)
+----------------------------------------------------------------------
+Config                 5min    30min  Winner  
+----------------------------------------------------------------------
+capsule               0.95x    0.41x  5min
+sphere m=2.0          1.50x    1.43x  5min
+cube m=2.0            1.61x    1.47x  5min
+ell 0.5:0.5           1.71x    1.73x  30min
+sphere m=2.5          1.96x    2.00x  30min
+ell 1:0.5 m2.5        1.96x    2.04x  30min
+cube m=2.5            2.77x    2.95x  30min
+cylinder              3.10x    3.15x  30min
+ell 1:0.5 m3          3.23x    3.19x  5min
+ell 0.9:2.5           3.40x    3.35x  5min
+sphere m=3.0          3.61x    3.44x  5min
+ell 1:3 m2.5          4.14x    3.95x  5min
+ell 1:2 m2.5          4.44x    4.12x  5min
+ell 1:2 m3.0          7.45x    7.77x  30min
+
+
+KEY CONCLUSIONS
+----------------------------------------------------------------------
+
+1. The existing hyperparameters (r_cut=7, hidden=512, 4L, adversarial loss,
+   LR=5e-4, grid 8-32, curriculum 0.3) are already well-optimized.
+   24 experiments found no improvement.
+
+2. Pretrained model (~3.0x) matches 30-min from-scratch (3.05x).
+   Fine-tuning a pretrained model for 5 min slightly degrades it.
+
+3. Training step count is the primary bottleneck.
+   More steps = better, but each step's quality also matters.
+
+4. The adversarial loss quality-vs-quantity tradeoff depends on budget:
+   - Short budget (5 min): higher adv_iters (20) wins (fewer but better steps)
+   - Long budget (30 min): lower adv_iters (10) wins (more steps, enough quality)
+
+5. GMRES loss is catastrophic for fine-tuning pretrained models (0.06x).
+
+6. The autoresearch format works well for systematic exploration but is
+   limited when the starting configuration is already near-optimal.

@@ -1,0 +1,18 @@
+commit	median_speedup	mean_speedup	worst_speedup	memory_gb	status	description
+abdd164	3.051662	2.929081	0.414634	0.5	keep	30min baseline: adv_iters=10 curriculum=0.3 LR=5e-4
+60739ed	2.726901	2.759165	0.947368	0.5	discard	adv_iters=20 (16K steps less coverage)
+a3f193d	2.626812	2.834921	0.782609	0.5	discard	LR=1e-3 too high oscillates
+e1bbc53	2.373673	2.479260	1.200000	0.5	discard	grid 8-40 no curriculum (only 7K steps too slow)
+58084f1	2.886364	2.905962	0.529412	0.5	discard	num_probes=10 (24K steps slightly less)
+50e0f94	2.678198	2.945050	0.428571	0.5	discard	grid 8-24 curriculum=0.15 (36K steps but too narrow)
+df3d01c	2.743355	3.101681	1.055556	0.5	discard	60min baseline 55K steps (median noise, mean/worst better)
+123d0e8	2.948106	2.988603	0.944444	0.6	discard	60min AMP 55K steps (no speedup, FFT bottleneck)
+0ce5ebb	2.841463	3.080985	1.200000	0.6	discard	120min EMA+warmup 111K steps (worst best, median noise)
+b5bcc7d	2.822813	2.992068	1.000000	0.7	discard	60min grad_accum=2 28K opt-steps (half steps, no gain)
+d90e3b2	2.908169	3.019546	0.947368	0.6	discard	60min 6-layer MLP 14.2M params (no improvement over 4L)
+26d6b87	3.149419	3.036154	0.703704	0.6	keep	60min EMA+warmup 55K steps (raw model 3.15x, EMA 3.04x)
+d8ea584	3.312741	3.420081	1.125000	0.6	keep	60min squared kernel M=K² 54K steps (EMA 3.31x, raw 3.21x)
+33b8e8c	3.244444	3.531900	1.500000	0.8	discard	60min dual-kernel M=K2·K1 27M params 51K steps (median lower, mean/worst better)
+ce12282	3.257752	3.275645	0.900000	0.6	discard	60min poly (K+K²)/2 54K steps (blending dilutes K² benefit)
+4bf8949	3.210893	3.464016	1.500000	0.6	discard	60min cubed kernel K³ 54K steps (worse median, noisy gradient)
+6c51543	3.310386	3.359521	1.200000	0.6	discard	120min K² 110K steps (same median as 60min K², raw model overfits)

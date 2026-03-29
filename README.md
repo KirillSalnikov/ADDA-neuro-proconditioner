@@ -2,13 +2,24 @@
 
 AI-прекондиционеры для ускорения итерационного решателя BiCGStab в программе [ADDA](https://github.com/adda-team/adda) (метод дискретных диполей, DDA).
 
+Проект основан на идеях из [neural-incomplete-factorization](https://github.com/paulhausner/neural-incomplete-factorization) (Paul Hausner) — GNN-прекондиционеры для систем линейных уравнений. Оттуда взяты базовые блоки (GraphNet, MLP), утилиты обучения и общий подход "нейросеть предсказывает приближённую обратную матрицу". Однако все финальные архитектуры (ConvSAI, K², Spectral) разработаны с нуля для специфики DDA.
+
+Поиск гиперпараметров проводился с помощью [autoresearch](https://github.com/karpathy/autoresearch) (Andrej Karpathy) — автоматизированный framework для запуска экспериментов. За 36 экспериментов (18×5мин + 6×30мин + 12×60мин) найдена K² архитектура (squared kernel), давшая +5% к медианному ускорению.
+
 ## Две модели
 
-### [K² v3](models/k2v3/) — Свёрточный прекондиционер (13.7M параметров)
-Предсказывает свёрточное ядро из физических параметров (m, kd, grid) и формы частицы. K² удваивает эффективный радиус через `M_hat = K_hat @ K_hat` в частотной области. Один файл весов для всех задач.
+### [K² v3](models/k2v3/) — Свёрточный прекондиционер
+- **13.7M параметров**, стенсильное ядро с r_cut=7, K² удваивает до r_cut=14
+- Один файл весов для всех задач (универсальный)
+- До **54x** ускорения итераций в ADDA
+- [Подробный гайд](docs/k2v3_guide.md)
 
-### [Spectral](models/spectral/) — Спектральный прекондиционер (228K параметров)
-Для каждой частотной точки предсказывает прекондиционер из матрицы задачи D_hat. Нет ограничения по дальности. Побеждает K² v3 на больших grid. Нужен переэкспорт для каждой задачи.
+### [Spectral](models/spectral/) — Спектральный прекондиционер
+- **228K параметров** (в 60 раз меньше), поточечная MLP в частотной области
+- Видит матрицу задачи D_hat → адаптируется к конкретной физике
+- До **48x** ускорения, побеждает K² v3 в 29/31 тестах
+- Нужен переэкспорт для каждой задачи
+- [Подробный гайд](docs/spectral_guide.md) | [PDF](docs/spectral_guide.pdf)
 
 ## Результаты в ADDA
 
@@ -33,21 +44,21 @@ cd adda/src
 make seq FFTW3_INC_PATH=$HOME/.local/include FFTW3_LIB_PATH=$HOME/.local/lib
 ```
 
-### Использование K² v3
+### K² v3
 ```bash
-# Экспорт
+# Экспорт (один раз, подходит для любого grid/m)
 python apps/export_universal_precond.py \
     --checkpoint models/k2v3/checkpoints/best_model.pt \
     --squared_kernel --shape sphere --grid 33 \
     --m_re 3.0 --kd 0.4189 --output /tmp/precond.precond
 
-# ADDA
+# Запуск ADDA
 LD_LIBRARY_PATH=$HOME/.local/lib \
 adda/src/seq/adda -grid 33 -m 3.0 0.0 -shape sphere \
     -eps 5 -dpl 15 -precond /tmp/precond.precond
 ```
 
-### Использование Spectral
+### Spectral
 ```bash
 # Экспорт (нужен для каждой задачи)
 python apps/export_spectral_precond.py \
@@ -55,7 +66,7 @@ python apps/export_spectral_precond.py \
     --shape sphere --grid 33 --m_re 3.0 --kd 0.4189 \
     --output /tmp/precond.precond
 
-# ADDA (обязательно -grid, НЕ -size!)
+# Запуск ADDA (обязательно -grid, НЕ -size!)
 LD_LIBRARY_PATH=$HOME/.local/lib \
 adda/src/seq/adda -grid 33 -m 3.0 0.0 -shape sphere \
     -eps 5 -dpl 15 -precond /tmp/precond.precond
@@ -63,13 +74,13 @@ adda/src/seq/adda -grid 33 -m 3.0 0.0 -shape sphere \
 
 ### Обучение с нуля
 ```bash
-# K² v3
+# K² v3 (~8 часов на RTX 4090)
 python train_v7/train.py --name my_k2v3 --device 0 --save \
     --loss adversarial --squared_kernel \
     --r_cut 7 --hidden_size 512 --num_layers 4 \
     --grid_min 8 --grid_max 64 --num_steps 60000 --lr 5e-4
 
-# Spectral
+# Spectral (~9 часов на RTX 4090)
 python train_v7/train.py --name my_spectral --device 0 --save \
     --loss adversarial --spectral --squared_kernel \
     --freq_hidden 256 --freq_layers 5 \
@@ -80,31 +91,39 @@ python train_v7/train.py --name my_spectral --device 0 --save \
 
 ```
 models/
-  k2v3/                          — K² v3 модель + README
-  spectral/                      — Spectral модель + README
+  k2v3/                         — K² v3: чекпоинт + README
+  spectral/                     — Spectral: чекпоинт + README
 neural_precond/
-  model.py                       — все архитектуры
-  loss.py                        — функции потерь
-neuralif/
-  fft_matvec.py                  — Python FFT матрично-векторное произведение
+  model.py                      — все архитектуры (ConvSAI_Universal, ConvSAI_Spectral, ...)
+  loss.py                       — функции потерь (adversarial probe, probe, bicgstab)
+core/
+  fft_matvec.py                 — FFT матрично-векторное произведение (Python аналог ADDA MatVec)
+  models.py                     — базовые блоки (GraphNet, MLP) из neural-incomplete-factorization
+  utils.py                      — утилиты
+  logger.py                     — логгер обучения
 train_v7/
-  train.py                       — скрипт обучения
+  train.py                      — скрипт обучения (K² v3 и Spectral)
 apps/
-  export_universal_precond.py    — экспорт K² v3 в .precond
-  export_spectral_precond.py     — экспорт Spectral в .precond
-  adda_matrix.py                 — генерация диполей, LDR поляризуемость
+  export_universal_precond.py   — экспорт K² v3 в .precond
+  export_spectral_precond.py    — экспорт Spectral в .precond
+  export_sai_precond.py         — экспорт SAI (базовый формат)
+  adda_matrix.py                — генерация диполей, LDR поляризуемость
 krylov/
-  bicgstab.py                    — Python BiCGStab
-adda/src/
-  precond.c, precond.h           — C код прекондиционера в ADDA
+  bicgstab.py                   — Python BiCGStab (для валидации при обучении)
+adda_src_modified/
+  precond.c, precond.h          — загрузка и применение прекондиционера в ADDA
+  calculator.c                  — вызов DumpDhat() после InitDmatrix()
+  param.c                       — CLI аргументы -precond, -dump_dhat
+  vars.c, vars.h                — переменные precond_filename, dump_dhat_filename
+  ADDAmain.c                    — инициализация прекондиционера
 docs/
-  spectral_guide.md              — подробный гайд по Spectral (со словарём терминов)
-  spectral_guide.pdf             — PDF версия гайда
+  spectral_guide.md             — подробный гайд по Spectral (со словарём)
+  spectral_guide.pdf            — PDF версия
+  k2v3_guide.md                 — подробный гайд по K² v3
 ```
 
-## Документация
+## Благодарности
 
-- [Spectral Guide (MD)](docs/spectral_guide.md) — подробный гайд с словарём терминов
-- [Spectral Guide (PDF)](docs/spectral_guide.pdf) — PDF версия
-- [K² v3 README](models/k2v3/README.md)
-- [Spectral README](models/spectral/README.md)
+- [neural-incomplete-factorization](https://github.com/paulhausner/neural-incomplete-factorization) — базовые GNN блоки и общий подход к нейросетевым прекондиционерам
+- [autoresearch](https://github.com/karpathy/autoresearch) — автоматизированный поиск гиперпараметров, через который найдена K² архитектура
+- [ADDA](https://github.com/adda-team/adda) — программа дискретных диполей
