@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as st
 
-from neuralif.utils import kA_bound
+from core.utils import kA_bound
 
 
 @dataclass

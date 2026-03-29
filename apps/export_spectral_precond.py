@@ -22,7 +22,7 @@ import torch
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 from neural_precond.model import ConvSAI_Spectral, positions_to_occupancy
-from neuralif.fft_matvec import FFTMatVec
+from core.fft_matvec import FFTMatVec
 from apps.export_universal_precond import (
     make_shape_positions, export_convsai_fft,
 )

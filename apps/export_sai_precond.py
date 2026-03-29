@@ -30,7 +30,7 @@ from adda_matrix import (
     build_interaction_matrix,
 )
 from apps.generate_sai_dataset import build_sai_graph
-from neuralif.models import NeuralSAI
+from core.models import NeuralSAI
 
 PRECOND_MAGIC = 0x4E49464C
 SAI_MODE = 1  # Left preconditioning flag

@@ -27,7 +27,7 @@ import torch.nn as nn
 from torch.utils.checkpoint import checkpoint as torch_checkpoint
 from torch_geometric.nn import aggr
 
-from neuralif.models import GraphNet, MLP
+from core.models import GraphNet, MLP
 
 
 class NeuralPrecond(nn.Module):

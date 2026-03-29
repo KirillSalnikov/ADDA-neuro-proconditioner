@@ -7,7 +7,7 @@ from torch_geometric.nn import aggr
 from torch_geometric.utils import to_scipy_sparse_matrix
 from scipy.sparse import tril
 
-from neuralif.utils import TwoHop, gershgorin_norm
+from core.utils import TwoHop, gershgorin_norm
 
 
 ############################

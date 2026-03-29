@@ -32,9 +32,9 @@ import torch.nn as nn
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from neuralif.fft_matvec import FFTMatVec
-from neuralif.utils import count_parameters, save_dict_to_file
-from neuralif.logger import TrainResults
+from core.fft_matvec import FFTMatVec
+from core.utils import count_parameters, save_dict_to_file
+from core.logger import TrainResults
 
 from apps.adda_matrix import (
     make_sphere_dipoles, make_cube_dipoles, make_ellipsoid_dipoles,
