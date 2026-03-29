@@ -4,7 +4,7 @@ AI-прекондиционеры для ускорения итерационн
 
 Проект основан на идеях из [neural-incomplete-factorization](https://github.com/paulhausner/neural-incomplete-factorization) (Paul Hausner) — GNN-прекондиционеры для систем линейных уравнений. Оттуда взяты базовые блоки (GraphNet, MLP), утилиты обучения и общий подход "нейросеть предсказывает приближённую обратную матрицу". Однако все финальные архитектуры (ConvSAI, K², Spectral) разработаны с нуля для специфики DDA.
 
-Поиск гиперпараметров проводился с помощью [autoresearch](https://github.com/karpathy/autoresearch) (Andrej Karpathy) — автоматизированный framework для запуска экспериментов. За 36 экспериментов (18×5мин + 6×30мин + 12×60мин) найдена K² архитектура (squared kernel), давшая +5% к медианному ускорению.
+Поиск гиперпараметров проводился с помощью [autoresearch](https://github.com/karpathy/autoresearch) (Andrej Karpathy) — автоматизированный framework для запуска экспериментов. За 36 экспериментов (18×5мин + 6×30мин + 12×60мин) найдена K² архитектура (squared kernel).
 
 ## Две модели
 
@@ -60,7 +60,7 @@ adda/src/seq/adda -grid 33 -m 3.0 0.0 -shape sphere \
 
 ### Spectral
 ```bash
-# Экспорт (нужен для каждой задачи)
+# Экспорт (нужен для каждой задачи)Поиск гиперпараметров проводился с помощью autoresearch (Andrej Karpathy) — автоматизированный framework для запуска экспериментов. За 36 экспериментов (18×5мин + 6×30мин + 12×60мин) найдена K² архитектура (squared kernel), давшая +5% к медианному ускорению.
 python apps/export_spectral_precond.py \
     --checkpoint models/spectral/checkpoints/best_model.pt \
     --shape sphere --grid 33 --m_re 3.0 --kd 0.4189 \
@@ -74,13 +74,13 @@ adda/src/seq/adda -grid 33 -m 3.0 0.0 -shape sphere \
 
 ### Обучение с нуля
 ```bash
-# K² v3 (~8 часов на RTX 4090)
+# K² v3 (~8 часов на RTX 3090 Ti)
 python train_v7/train.py --name my_k2v3 --device 0 --save \
     --loss adversarial --squared_kernel \
     --r_cut 7 --hidden_size 512 --num_layers 4 \
     --grid_min 8 --grid_max 64 --num_steps 60000 --lr 5e-4
 
-# Spectral (~9 часов на RTX 4090)
+# Spectral (~9 часов на RTX 3090 Ti)
 python train_v7/train.py --name my_spectral --device 0 --save \
     --loss adversarial --spectral --squared_kernel \
     --freq_hidden 256 --freq_layers 5 \
